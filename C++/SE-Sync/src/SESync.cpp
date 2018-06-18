@@ -9,8 +9,8 @@
 
 namespace SESync {
 
-SESyncResult SESync(const measurements_t &measurements,
-                    const SESyncOpts &options, const Matrix &Y0) {
+SESyncResult SESync(SESyncProblem &problem, const SESyncOpts &options,
+                    const Matrix &Y0) {
 
   /// ALGORITHM DATA
 
@@ -32,10 +32,10 @@ SESyncResult SESync(const measurements_t &measurements,
     std::cout << "ALGORITHM SETTINGS:" << std::endl << std::endl;
     std::cout << "SE-Sync settings:" << std::endl;
     std::cout << " SE-Sync problem formulation: ";
-    if (options.formulation == Simplified)
-      std::cout << "simplified";
+    if (problem.formulation() == Formulation::Simplified)
+      std::cout << "Simplified";
     else // Explicit)
-      std::cout << "explicit";
+      std::cout << "Explicit";
     std::cout << std::endl;
     std::cout << " Initial level of Riemannian staircase: " << options.r0
               << std::endl;
@@ -49,19 +49,25 @@ SESyncResult SESync(const measurements_t &measurements,
     std::cout << " Tolerance for accepting an eigenvalue as numerically "
                  "nonnegative in optimality verification: "
               << options.min_eig_num_tol << std::endl;
-    if (options.formulation == Simplified) {
-      std::cout << " Using " << (options.use_Cholesky ? "Cholseky" : "QR")
+    if (options.formulation == Formulation::Simplified) {
+      std::cout << " Using " << (problem.projection_factorization() ==
+                                         ProjectionFactorization::Cholesky
+                                     ? "Cholseky"
+                                     : "QR")
                 << " decomposition to compute orthogonal projections"
                 << std::endl;
     }
     std::cout << " Initialization method: "
-              << (options.use_chordal_initialization ? "chordal" : "random")
+              << (options.initialization == Initialization::Chordal ? "chordal"
+                                                                    : "random")
               << std::endl;
     if (options.log_iterates)
       std::cout << " Logging entire sequence of Riemannian Staircase iterates"
                 << std::endl;
+#if defined(_OPENMP)
     std::cout << " Running SE-Sync with " << options.num_threads << " threads"
               << std::endl;
+#endif
     std::cout << std::endl;
 
     std::cout << "Riemannian trust-region settings:" << std::endl;
@@ -85,16 +91,16 @@ SESyncResult SESync(const measurements_t &measurements,
               << (1 + options.STPCG_theta) << std::endl;
     std::cout
         << " Preconditioning the truncated conjugate gradient method using ";
-    if (options.precon == None)
+    if (problem.preconditioner() == Preconditioner::None)
       std::cout << "the identity preconditioner";
-    else if (options.precon == Jacobi)
+    else if (problem.preconditioner() == Preconditioner::Jacobi)
       std::cout << "Jacobi preconditioner";
-    else if (options.precon == IncompleteCholesky)
+    else if (problem.preconditioner() == Preconditioner::IncompleteCholesky)
       std::cout << "incomplete Cholesky preconditioner";
-    else if (options.precon == RegularizedCholesky)
+    else if (problem.preconditioner() == Preconditioner::RegularizedCholesky)
       std::cout << "regularized Cholesky preconditioner with maximum condition "
                    "number "
-                << options.reg_Cholesky_precon_max_condition_number;
+                << problem.regularized_Cholesky_preconditioner_max_condition();
 
     std::cout << std::endl << std::endl;
   }
@@ -102,27 +108,10 @@ SESyncResult SESync(const measurements_t &measurements,
   /// ALGORITHM START
   auto SESync_start_time = Stopwatch::tick();
 
-  // Set number of threads
+// Set number of threads
+#if defined(_OPENMP)
   omp_set_num_threads(options.num_threads);
-
-  /// CONSTRUCT SE-SYNC PROBLEM INSTANCE
-  if (options.verbose)
-    std::cout << "INITIALIZATION:" << std::endl;
-
-  if (options.verbose)
-    std::cout << " Constructing SE-Sync problem instance ... ";
-
-  auto problem_construction_start_time = Stopwatch::tick();
-  SESyncProblem problem(measurements, options.formulation, options.use_Cholesky,
-                        options.precon,
-                        options.reg_Cholesky_precon_max_condition_number);
-  problem.set_relaxation_rank(options.r0);
-  double problem_construction_elapsed_time =
-      Stopwatch::tock(problem_construction_start_time);
-
-  if (options.verbose)
-    std::cout << "elapsed computation time: "
-              << problem_construction_elapsed_time << " seconds" << std::endl;
+#endif
 
   /// SET UP OPTIMIZATION
 
@@ -175,7 +164,7 @@ SESyncResult SESync(const measurements_t &measurements,
   std::experimental::optional<
       Optimization::Smooth::LinearOperator<Matrix, Matrix, Matrix>>
       precon;
-  if (options.precon == None)
+  if (options.preconditioner == Preconditioner::None)
     precon = std::experimental::nullopt;
   else {
     Optimization::Smooth::LinearOperator<Matrix, Matrix, Matrix> precon_op =
@@ -187,6 +176,10 @@ SESyncResult SESync(const measurements_t &measurements,
   }
 
   /// INITIALIZATION
+  if (options.verbose)
+    std::cout << "INITIALIZATION:" << std::endl;
+
+  problem.set_relaxation_rank(options.r0);
 
   if (Y0.size() != 0) {
     if (options.verbose)
@@ -194,7 +187,7 @@ SESyncResult SESync(const measurements_t &measurements,
 
     Y = Y0;
   } else {
-    if (options.use_chordal_initialization) {
+    if (options.initialization == Initialization::Chordal) {
       if (options.verbose)
         std::cout << " Computing chordal initialization ... ";
 
@@ -272,7 +265,8 @@ SESyncResult SESync(const measurements_t &measurements,
     /// Run optimization!
     Optimization::Smooth::TNTResult<Matrix> TNTResults =
         Optimization::Smooth::TNT<Matrix, Matrix, Matrix>(
-            F, QM, metric, retraction, Y, NablaF_Y, precon, params);
+            F, QM, metric, retraction, Y, NablaF_Y, precon, params,
+            options.user_function);
 
     // Extract the results
     SESyncResults.Yopt = TNTResults.x;
@@ -312,11 +306,12 @@ SESyncResult SESync(const measurements_t &measurements,
 
     // Compute the minimum eigenvalue lambda and corresponding eigenvector
     // of Q - Lambda
+    unsigned int num_min_eig_iterations;
     auto eig_start_time = Stopwatch::tick();
     bool eigenvalue_convergence = problem.compute_S_minus_Lambda_min_eig(
         SESyncResults.Yopt, SESyncResults.lambda_min, SESyncResults.v_min,
-        options.max_eig_iterations, options.min_eig_num_tol,
-        options.num_Lanczos_vectors);
+        num_min_eig_iterations, options.max_eig_iterations,
+        options.min_eig_num_tol, options.num_Lanczos_vectors);
     double eig_elapsed_time = Stopwatch::tock(eig_start_time);
 
     // Check eigenvalue convergence
@@ -330,6 +325,8 @@ SESyncResult SESync(const measurements_t &measurements,
 
     // Record results of eigenvalue computation
     SESyncResults.minimum_eigenvalues.push_back(SESyncResults.lambda_min);
+    SESyncResults.minimum_eigenvalue_matrix_ops.push_back(
+        num_min_eig_iterations);
     SESyncResults.minimum_eigenvalue_computation_times.push_back(
         eig_elapsed_time);
 
@@ -337,10 +334,11 @@ SESyncResult SESync(const measurements_t &measurements,
     if (SESyncResults.lambda_min > -options.min_eig_num_tol) {
       // results.Yopt is a second-order critical point (global optimum)!
       if (options.verbose)
-        std::cout << "Found second-order critical point! (minimum eigenvalue = "
+        std::cout << "Found second-order critical point! Minimum eigenvalue: "
                   << SESyncResults.lambda_min
-                  << "). Elapsed computation time: " << eig_elapsed_time
-                  << " seconds" << std::endl;
+                  << ".  Elapsed computation time: " << eig_elapsed_time
+                  << " seconds (" << num_min_eig_iterations
+                  << " matrix-vector multiplications)." << std::endl;
       SESyncResults.status = GLOBAL_OPT;
       break;
     } // global optimality
@@ -348,10 +346,11 @@ SESyncResult SESync(const measurements_t &measurements,
 
       /// ESCAPE FROM SADDLE!
       if (options.verbose) {
-        std::cout << "Saddle point detected (minimum eigenvalue = "
+        std::cout << "Saddle point detected! Minimum eigenvalue: "
                   << SESyncResults.lambda_min
-                  << "). Elapsed computation time: " << eig_elapsed_time
-                  << " seconds" << std::endl;
+                  << ".  Elapsed computation time: " << eig_elapsed_time
+                  << " seconds (" << num_min_eig_iterations
+                  << " matrix-vector multiplications)." << std::endl;
 
         std::cout << "Computing escape direction ... " << std::endl;
       }
@@ -438,7 +437,7 @@ SESyncResult SESync(const measurements_t &measurements,
   // extract only the *rotational* elements of xhat if the SE synchronization
   // problem was solved using the simplified formulation
   SESyncResults.Fxhat =
-      (options.formulation == Simplified
+      (options.formulation == Formulation::Simplified
            ? problem.evaluate_objective(SESyncResults.xhat.block(
                  0, problem.num_poses(), problem.dimension(),
                  problem.dimension() * problem.num_poses()))
@@ -498,6 +497,25 @@ SESyncResult SESync(const measurements_t &measurements,
     std::cout << "===== END SE-SYNC =====" << std::endl << std::endl;
   }
   return SESyncResults;
+}
+
+SESyncResult SESync(const measurements_t &measurements,
+                    const SESyncOpts &options, const Matrix &Y0) {
+  if (options.verbose)
+    std::cout << "Constructing SE-Sync problem instance ... ";
+
+  auto problem_construction_start_time = Stopwatch::tick();
+  SESyncProblem problem(
+      measurements, options.formulation, options.projection_factorization,
+      options.preconditioner, options.reg_Cholesky_precon_max_condition_number);
+  double problem_construction_elapsed_time =
+      Stopwatch::tock(problem_construction_start_time);
+  if (options.verbose)
+    std::cout << "elapsed computation time: "
+              << problem_construction_elapsed_time << " seconds" << std::endl
+              << std::endl;
+
+  return SESync(problem, options, Y0);
 }
 
 bool escape_saddle(const SESyncProblem &problem, const Matrix &Y,

@@ -65,10 +65,15 @@ struct SESyncOpts {
   /** Maximum elapsed computation time (in seconds) */
   double max_computation_time = std::numeric_limits<double>::max();
 
+  /** An optional user-supplied function that can be used to instrument/monitor
+   * the performance of the internal Riemannian truncated-Newton trust-region
+   * optimization algorithm as it runs. */
+  std::experimental::optional<SESyncTNTUserFunction> user_function;
+
   /// SE-SYNC PARAMETERS
 
   /** The specific formulation of the SE-Sync problem to solve */
-  Formulation formulation = Simplified;
+  Formulation formulation = Formulation::Simplified;
 
   /** The initial level of the Riemannian Staircase */
   unsigned int r0 = 5;
@@ -90,22 +95,23 @@ struct SESyncOpts {
 (#poses) * (#problem dimension) - 1] */
   unsigned int num_Lanczos_vectors = 20;
 
-  /** If no initial iterate Y0 is supplied, this boolean determines the
- * initialization strategy employed by SE-Sync: 'true' -> chordal, 'false' ->
- * random sampling */
-  bool use_chordal_initialization = true;
-
   /** Whether to use the Cholesky or QR factorization when computing the
    * orthogonal projection */
-  bool use_Cholesky = true;
+  ProjectionFactorization projection_factorization =
+      ProjectionFactorization::Cholesky;
 
   /** The preconditioning strategy to use in the Riemannian trust-region
    * algorithm*/
-  Preconditioner precon = RegularizedCholesky;
+  Preconditioner preconditioner = Preconditioner::RegularizedCholesky;
 
   /** Maximum admissible condition number for the regularized Cholesky
    * preconditioner */
   double reg_Cholesky_precon_max_condition_number = 1e6;
+
+  /** If no initial iterate Y0 is supplied, this boolean determines the
+ * initialization strategy employed by SE-Sync: 'true' -> chordal, 'false' ->
+ * random sampling */
+  Initialization initialization = Initialization::Chordal;
 
   /** Whether to print output as the algorithm runs */
   bool verbose = false;
@@ -222,6 +228,11 @@ struct SESyncResult {
    * optimization at each level of the Riemannian Staircase */
   std::vector<double> minimum_eigenvalues;
 
+  /** A vector containing the number of matrix-vector multiplication operations
+   * performed for the minimum-eigenvalue computation at each level of the
+   * Riemannian Staircase */
+  std::vector<unsigned int> minimum_eigenvalue_matrix_ops;
+
   /** A vector containing the elapsed time of the minimum eigenvalue computation
    * at each level of the Riemannian Staircase */
   std::vector<double> minimum_eigenvalue_computation_times;
@@ -231,8 +242,14 @@ struct SESyncResult {
    * at each level of the Riemannian Staircase */
   std::vector<std::vector<Matrix>> iterates;
 
+  /** The termination status of the SE-Sync algorithm */
   SESyncStatus status;
 };
+
+/** Given an SESyncProblem instance, this function performs synchronization */
+SESyncResult SESync(SESyncProblem &problem,
+                    const SESyncOpts &options = SESyncOpts(),
+                    const Matrix &Y0 = Matrix());
 
 /** Given a vector of relative pose measurements specifying a special Euclidean
  * synchronization problem, performs synchronization using the SESync algorithm
