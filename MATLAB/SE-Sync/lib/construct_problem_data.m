@@ -107,5 +107,9 @@ problem_data.sqrt_Omega = spdiags(sqrt(spdiags(Omega)), 0, problem_data.m, probl
 problem_data.sqrt_Omega_AredT = problem_data.sqrt_Omega * problem_data.Ared';
 problem_data.sqrt_Omega_T = problem_data.sqrt_Omega * problem_data.T;
 
+% Contruct the matrices for the outliers robust formulation
+% See eq 22 in L. Carlone, G. C. Calafiore, and R. O. Jan, “Convex Relaxations for Pose Graph Optimization with Outliers,” 2018.
+problem_data.R = measurements.R;
+problem_data.edges = measurements.edges;
 end
 

@@ -205,7 +205,7 @@ end
 
 if ~isfield(SE_Sync_opts, 'init')
     fprintf(' Initialization method: chordal [default]\n');
-    SE_Sync_opts.init = 'chordal';
+    SE_Sync_opts.init = 'random';
 else
     if strcmp(SE_Sync_opts.init, 'chordal')
         fprintf(' Initialization method: chordal\n');

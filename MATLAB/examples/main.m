@@ -30,10 +30,11 @@ manhattan = 'manhattan';
 city10000 = 'city10000';
 intel = 'intel';
 ais = 'ais2klinik';
+intel_outliers = 'intel_outliers';
 
 
 % Pick the dataset to run here
-file = sphere2500;
+file = CSAIL;
 
 g2o_file = strcat(data_dir, file, '.g2o');
 
@@ -66,21 +67,21 @@ SE_Sync_opts.eig_comp_rel_tol = 1e-4;  % Relative tolerance for the minimum-eige
 SE_Sync_opts.min_eig_lower_bound = -1e-3;  % Minimum eigenvalue threshold for accepting a maxtrix as numerically positive-semidefinite
 SE_Sync_opts.Cholesky = false;  % Select whether to use Cholesky or QR decomposition to compute orthogonal projections
 
-use_chordal_initialization = true;  % Select whether to use the chordal initialization, or a random starting point
+use_chordal_initialization = false;  % Select whether to use the chordal initialization, or a random starting point
 
 %% Run SE-Sync
 
 % Pass explict settings for SE-Sync and/or Manopt, and use chordal
 % initialization
-fprintf('Computing chordal initialization...\n');
-R = chordal_initialization(measurements);
-Y0 = vertcat(R, zeros(SE_Sync_opts.r0 - d, num_poses*d));
-[SDPval, Yopt, xhat, Fxhat, SE_Sync_info, problem_data] = SE_Sync(measurements, Manopt_opts, SE_Sync_opts, Y0);
+%fprintf('Computing chordal initialization...\n');
+%R = chordal_initialization(measurements);
+%Y0 = vertcat(R, zeros(SE_Sync_opts.r0 - d, num_poses*d));
+%[SDPval, Yopt, xhat, Fxhat, SE_Sync_info, problem_data] = SE_Sync(measurements, Manopt_opts, SE_Sync_opts, Y0);
 
 % ... or ...
 
 % Use default settings for everything
-%[SDPval, Yopt, xhat, Fxhat, se_sync_info, problem_data] = SE_Sync(measurements);
+[SDPval, Yopt, xhat, Fxhat, se_sync_info, problem_data] = SE_Sync(measurements);
 
 %% Plot resulting solution
 plot_loop_closures = true;
