@@ -10,8 +10,14 @@ if nargin < 3
     use_Cholesky = true;
 end
 
-egrad = 2*Qproduct(Y', problem_data, use_Cholesky)';
+%egrad = 2*Qproduct(Y', problem_data, use_Cholesky)';
 
+Yt = Y';
+YQ = Qproduct(Yt, problem_data, use_Cholesky)';
+
+trQYtY = sqrt(trace(YQ * Yt));
+
+egrad = YQ/trQYtY;
 
 
 end

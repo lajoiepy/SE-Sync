@@ -10,9 +10,15 @@ if nargin < 3
     use_Cholesky = true;
 end
 
-Hvec = 2*Qproduct(Ydot', problem_data, use_Cholesky)';
+%Hvec = 2*Qproduct(Ydot', problem_data, use_Cholesky)';
 
 
+Yt = Ydot';
+YQ = Qproduct(Yt, problem_data, use_Cholesky)';
+
+trQYtY = sqrt(trace(YQ * Yt));
+
+Hvec = YQ/trQYtY;
 
 end
 
