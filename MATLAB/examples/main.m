@@ -54,8 +54,8 @@ fprintf('Number of measurements: %d\n', num_measurements);
 Manopt_opts.tolgradnorm = 1e-2;  % Stopping tolerance for norm of Riemannian gradient
 Manopt_opts.rel_func_tol = 1e-5;  % Additional stopping criterion for Manopt: stop if the relative function decrease between two successive accepted iterates is less than this value
 Manopt_opts.miniter = 1;  % Minimum number of outer iterations (i.e. accepted update steps) to perform
-Manopt_opts.maxiter = 10000;%300;  % Maximum number of outer iterations (i.e. accepted update steps) to perform
-Manopt_opts.maxinner = 10000;%500;  % Maximum number of iterations for the conjugate-gradient method used to compute approximate Newton steps
+Manopt_opts.maxiter = 300;  % Maximum number of outer iterations (i.e. accepted update steps) to perform
+Manopt_opts.maxinner = 500;  % Maximum number of iterations for the conjugate-gradient method used to compute approximate Newton steps
 %manopt_options.maxtime = 60*60;  % Maximum computation time to allow, in seconds
 %manopt_options.solver = @steepestdescent;  % Select Manopt solver to use: {trustregions (default), conjugategradient, steepestdescent}
 

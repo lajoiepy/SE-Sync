@@ -17,7 +17,7 @@ YQ = Qproduct(Yt, problem_data, use_Cholesky)';
 
 trQYtY = sqrt(trace(YQ * Yt));
 
-egrad = YQ/trQYtY;
+egrad = 4*YQ/trQYtY;
 
 
 end
