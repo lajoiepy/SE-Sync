@@ -132,6 +132,9 @@ private:
   report).*/
   StiefelProduct SP_;
 
+  /** Objective function **/
+  ObjectiveFunction obj_func_;
+
 public:
   /// CONSTRUCTORS AND MUTATORS
 
@@ -159,7 +162,8 @@ public:
       const ProjectionFactorization &projection_factorization =
           ProjectionFactorization::Cholesky,
       const Preconditioner &preconditioner = Preconditioner::IncompleteCholesky,
-      double reg_chol_precon_max_cond = 1e6);
+      double reg_chol_precon_max_cond = 1e6,
+      const ObjectiveFunction &obj_func = ObjectiveFunction::Squared_L2);
 
   /** Set the maximum rank of the rank-restricted semidefinite relaxation */
   void set_relaxation_rank(unsigned int rank);

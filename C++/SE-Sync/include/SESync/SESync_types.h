@@ -45,6 +45,10 @@ enum class Formulation {
  * Euclidean synchronization problem */
 enum class ProjectionFactorization { Cholesky, QR };
 
+/** Objective function used for optimization.
+ * */
+enum class ObjectiveFunction { Squared_L2, Unsquared_L2 };
+
 /** The set of available preconditioning strategies to use in the Riemannian
  * Trust Region when solving this problem */
 enum class Preconditioner {

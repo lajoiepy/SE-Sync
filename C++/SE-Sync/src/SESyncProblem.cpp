@@ -11,10 +11,11 @@ namespace SESync {
 SESyncProblem::SESyncProblem(
     const measurements_t &measurements, const Formulation &formulation,
     const ProjectionFactorization &projection_factorization,
-    const Preconditioner &precon, double reg_chol_precon_max_cond)
+    const Preconditioner &precon, double reg_chol_precon_max_cond,
+    const ObjectiveFunction &obj_func)
     : form_(formulation), projection_factorization_(projection_factorization),
       preconditioner_(precon),
-      reg_Chol_precon_max_cond_(reg_chol_precon_max_cond) {
+      reg_Chol_precon_max_cond_(reg_chol_precon_max_cond), obj_func_(obj_func) {
 
   // Construct oriented incidence matrix for the underlying pose graph
   A_ = construct_oriented_incidence_matrix(measurements);
@@ -160,17 +161,27 @@ Matrix SESyncProblem::data_matrix_product(const Matrix &Y) const {
 }
 
 double SESyncProblem::evaluate_objective(const Matrix &Y) const {
-  if (form_ == Formulation::Simplified)
-    return (Y * Q_product(Y.transpose())).trace();
-  else // form == Explicit
-    return (Y * M_ * Y.transpose()).trace();
+  if (obj_func_ == ObjectiveFunction::Squared_L2) {
+    if (form_ == Formulation::Simplified)
+      return (Y * Q_product(Y.transpose())).trace();
+    else // form == Explicit
+      return (Y * M_ * Y.transpose()).trace();
+  } else if (obj_func_ == ObjectiveFunction::Unsquared_L2) {
+    return sqrt((Y * Q_product(Y.transpose())).trace());
+  }
 }
 
 Matrix SESyncProblem::Euclidean_gradient(const Matrix &Y) const {
-  if (form_ == Formulation::Simplified)
-    return 2 * data_matrix_product(Y.transpose()).transpose();
-  else // form == Explicit
-    return 2 * Y * M_;
+  if (obj_func_ == ObjectiveFunction::Squared_L2) {
+    if (form_ == Formulation::Simplified)
+      return 2 * data_matrix_product(Y.transpose()).transpose();
+    else // form == Explicit
+      return 2 * Y * M_;
+  } else if (obj_func_ == ObjectiveFunction::Unsquared_L2) {
+    Matrix YQ = Q_product(Y.transpose());
+    double norm = sqrt((Y * YQ).trace());
+    return 4* YQ.transpose() / norm;
+  }
 }
 
 Matrix SESyncProblem::Riemannian_gradient(const Matrix &Y,
@@ -184,12 +195,28 @@ Matrix SESyncProblem::Riemannian_gradient(const Matrix &Y) const {
 
 Matrix SESyncProblem::Riemannian_Hessian_vector_product(
     const Matrix &Y, const Matrix &nablaF_Y, const Matrix &dotY) const {
-  if (form_ == Formulation::Simplified)
-    return SP_.Proj(Y, 2 * Q_product(dotY.transpose()).transpose() -
-                           SP_.SymBlockDiagProduct(dotY, Y, nablaF_Y));
-  else {
+  if (obj_func_ == ObjectiveFunction::Squared_L2) {
+    if (form_ == Formulation::Simplified)
+      return SP_.Proj(Y, 2 * Q_product(dotY.transpose()).transpose() -
+                            SP_.SymBlockDiagProduct(dotY, Y, nablaF_Y));
+    else {
+      // Euclidean Hessian-vector product
+      Matrix H_dotY = 2 * dotY * M_;
+
+      H_dotY.block(0, n_, r_, d_ * n_) = SP_.Proj(
+          Y.block(0, n_, r_, d_ * n_),
+          H_dotY.block(0, n_, r_, d_ * n_) -
+              SP_.SymBlockDiagProduct(dotY.block(0, n_, r_, d_ * n_),
+                                      Y.block(0, n_, r_, d_ * n_),
+                                      nablaF_Y.block(0, n_, r_, d_ * n_)));
+      return H_dotY;
+    }
+  } else if (obj_func_ == ObjectiveFunction::Unsquared_L2) {
     // Euclidean Hessian-vector product
-    Matrix H_dotY = 2 * dotY * M_;
+    Matrix YQ = Q_product(dotY.transpose());
+    Matrix prod = dotY * YQ;
+    double norm = sqrt((prod).trace());
+    Matrix H_dotY = YQ.transpose() / norm;
 
     H_dotY.block(0, n_, r_, d_ * n_) = SP_.Proj(
         Y.block(0, n_, r_, d_ * n_),
