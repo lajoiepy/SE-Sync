@@ -14,6 +14,8 @@ end
 Yt = Y';
 YQ = Qproduct(Yt, problem_data, use_Cholesky)';
 
+% Squared L2
 %trQYtY = trace(YQ * Yt);
 
+% Unsquared L2
 trQYtY = sqrt(trace(YQ * Yt));

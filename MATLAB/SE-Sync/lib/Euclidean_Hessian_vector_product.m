@@ -10,9 +10,10 @@ if nargin < 3
     use_Cholesky = true;
 end
 
+% Squared L2
 %Hvec = 2*Qproduct(Ydot', problem_data, use_Cholesky)';
 
-
+% Unsquared L2
 Yt = Ydot';
 YQ = Qproduct(Yt, problem_data, use_Cholesky)';
 
