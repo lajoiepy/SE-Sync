@@ -30,6 +30,7 @@ int main(int argc, char **argv) {
   SESyncOpts opts;
   opts.verbose = true; // Print output to stdout
   opts.num_threads = 4;
+  opts.initialization = Initialization::Random;
 
 #ifdef GPERFTOOLS
   ProfilerStart("SE-Sync.prof");
