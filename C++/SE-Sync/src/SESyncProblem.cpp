@@ -180,7 +180,7 @@ Matrix SESyncProblem::Euclidean_gradient(const Matrix &Y) const {
   } else if (obj_func_ == ObjectiveFunction::Unsquared_L2) {
     Matrix YQ = Q_product(Y.transpose());
     double norm = sqrt((Y * YQ).trace());
-    return 4* YQ.transpose() / norm;
+    return YQ.transpose() / norm;
   }
 }
 
