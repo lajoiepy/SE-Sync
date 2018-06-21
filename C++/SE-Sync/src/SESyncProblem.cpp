@@ -212,19 +212,19 @@ Matrix SESyncProblem::Riemannian_Hessian_vector_product(
       return H_dotY;
     }
   } else if (obj_func_ == ObjectiveFunction::Unsquared_L2) {
-    // Euclidean Hessian-vector product
-    Matrix YQ = Q_product(dotY.transpose());
-    Matrix prod = dotY * YQ;
-    double norm = sqrt((prod).trace());
-    Matrix H_dotY = YQ.transpose() / norm;
-
-    H_dotY.block(0, n_, r_, d_ * n_) = SP_.Proj(
-        Y.block(0, n_, r_, d_ * n_),
-        H_dotY.block(0, n_, r_, d_ * n_) -
-            SP_.SymBlockDiagProduct(dotY.block(0, n_, r_, d_ * n_),
-                                    Y.block(0, n_, r_, d_ * n_),
-                                    nablaF_Y.block(0, n_, r_, d_ * n_)));
-    return H_dotY;
+    // Euclidean norm
+    Matrix Yt = dotY.transpose();
+    Matrix YQ = Q_product(Yt).transpose();
+    Matrix prod = YQ * Yt;
+    int norm = (int) sqrt((prod).trace());
+    double factor = 1;
+    if (norm == 0) {
+      factor = 1;
+    } else {
+      factor = 1/norm;
+    }
+    Matrix hess = factor*YQ - SP_.SymBlockDiagProduct(dotY, Y, nablaF_Y);
+    return SP_.Proj(Y, hess);
   }
 }
 
