@@ -7,6 +7,7 @@ project(SESync C CXX)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # We require C++ 14
 
+add_definitions(-DEIGEN_USE_MAGMA_ALL)
 
 # Set build type to 'RelWithDebInfo' if one was not specified by the user
 if(NOT CMAKE_BUILD_TYPE)
@@ -31,7 +32,7 @@ set(ENABLE_OPENMP ON CACHE BOOL "Enable OpenMP (if available)")
 set(ENABLE_PROFILING OFF CACHE BOOL "Enable code profiling using gperftools")
 
 # Add the .cmake files that ship with Eigen3 to the CMake module path (useful for finding other stuff)
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/eigen/cmake" CACHE STRING "The CMake module path used for this project")
+#set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/eigen/cmake" CACHE STRING "The CMake module path used for this project")
 
 if(${ENABLE_FAST_INSTRUCTIONS})
 message(STATUS "Enabling SIMD/AVX instruction sets")
@@ -49,14 +50,59 @@ message(STATUS "")
 # SESYNC DEPENDENCIES
 
 # FIND EIGEN3
-set( ENV{EIGEN3_ROOT_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/eigen)
-find_package(Eigen3 3.3.3 REQUIRED)
-if(EIGEN3_FOUND)
-message(STATUS "Found Eigen3 library (version ${EIGEN3_VERSION_STRING})")
-message(STATUS "Eigen3 include directory: ${EIGEN3_INCLUDE_DIR}\n")
-else()
-message(STATUS "Eigen library not found!")
+#set( ENV{EIGEN3_ROOT_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/eigen)
+#find_package(Eigen3 3 REQUIRED)
+#if(EIGEN3_FOUND)
+#message(STATUS "Found Eigen3 library (version ${EIGEN3_VERSION_STRING})")
+#message(STATUS "Eigen3 include directory: ${EIGEN3_INCLUDE_DIR}\n")
+#else()
+#message(STATUS "Eigen library not found!")
+#endif()
+## Eigen
+include_directories($ENV{EIGEN3_INCLUDE_DIR})
+message(STATUS
+    "EIGEN was found:\n"
+    "  EIGEN3_INCLUDE_DIRS: $ENV{EIGEN3_INCLUDE_DIR}"
+)
+
+## CUDA
+find_package(CUDA)
+if (CUDA_FOUND)
+    include_directories(
+        ${CUDA_INCLUDE_DIRS}
+        ${CUDA_CUT_INCLUDE_DIR}
+        ${CUDA_CUT_LIBRARIES}
+    )
+endif(CUDA_FOUND)
+
+## MAGMA
+#list(APPEND CMAKE_PREFIX_PATH /usr/local/magma)
+#find_package(MAGMA)
+#if (MAGMA_FOUND)
+INCLUDE_DIRECTORIES(/usr/local/magma/include)
+LINK_DIRECTORIES(/usr/local/magma/lib)
+add_definitions(-DADD_)
+add_definitions(-DMAGMA_SETAFFINITY)
+    #add_definitions(-DMAGMA_WITH_MKL)
+#include_directories(${MAGMA_INCLUDE_DIRS})
+#    message(STATUS
+#        "MAGMA was found:\n"
+#        "  MAGMA_INCLUDE_DIRS: ${MAGMA_INCLUDE_DIRS}\n"
+#        "  MAGMA_LIBRARY_DIRS: ${MAGMA_LIBRARY_DIRS}\n"
+#        "  MAGMA_LIBRARIES: ${MAGMA_LIBRARIES}"
+#    )
+#else()
+#    message(FATAL_ERROR "MAGMA was not found, please install it first")
+#endif()
+
+## MINGW
+if (MINGW)
+  set(gtest_disable_pthreads ON CACHE INTERNAL "" FORCE)
 endif()
+
+## MKL
+INCLUDE_DIRECTORIES(/opt/intel/mkl/include)
+LINK_DIRECTORIES(/opt/intel/mkl/lib)
 
 # FIND ADDITIONAL LIBRARIES
 # These next operations make use of the .cmake files shipped with Eigen3
@@ -120,7 +166,13 @@ ${SESync_SOURCE_DIR}/SESync.cpp
 add_library(SESync SHARED ${SESync_HDRS} ${SESync_SRCS})
 target_include_directories(SESync PRIVATE ${SESync_PRIVATE_INCLUDES})
 target_include_directories(SESync PUBLIC ${SESync_INCLUDES})
-target_link_libraries(SESync Optimization ${BLAS_LIBRARIES} ${CHOLMOD_LIBRARIES} ${SPQR_LIBRARIES} ${M} ${LAPACK})
+target_link_libraries(SESync Optimization ${BLAS_LIBRARIES} ${CHOLMOD_LIBRARIES} ${SPQR_LIBRARIES} ${M} ${LAPACK} 
+  ${Boost_LIBRARIES}
+  ${CUDA_LIBRARIES}
+  ${CUDA_CUBLAS_LIBRARIES}
+  ${MKL_LIBRARIES}
+  ${MAGMA_LIBRARIES}
+)
 
 if(OPENMP_FOUND)
 # Add additional compilation flags to enable OpenMP support

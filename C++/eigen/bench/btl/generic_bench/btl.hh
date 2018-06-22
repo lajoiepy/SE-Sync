@@ -44,10 +44,15 @@
 #define BTL_ASM_COMMENT(X)
 #endif
 
-#ifdef __SSE__
-#include "xmmintrin.h"
-// This enables flush to zero (FTZ) and denormals are zero (DAZ) modes:
-#define BTL_DISABLE_SSE_EXCEPTIONS()  { _mm_setcsr(_mm_getcsr() | 0x8040); }
+#if (defined __GNUC__) && (!defined __INTEL_COMPILER) && !defined(__arm__) && !defined(__powerpc__)
+#define BTL_DISABLE_SSE_EXCEPTIONS()  { \
+  int aux; \
+  asm( \
+  "stmxcsr   %[aux]           \n\t" \
+  "orl       $32832, %[aux]   \n\t" \
+  "ldmxcsr   %[aux]           \n\t" \
+  : : [aux] "m" (aux)); \
+}
 #else
 #define BTL_DISABLE_SSE_EXCEPTIONS()
 #endif
@@ -171,7 +176,7 @@ public:
     if (_config!=NULL)
     {
       std::vector<BtlString> config = BtlString(_config).split(" \t\n");
-      for (unsigned int i = 0; i<config.size(); i++)
+      for (int i = 0; i<config.size(); i++)
       {
         if (config[i].beginsWith("-a"))
         {
@@ -219,7 +224,7 @@ public:
       return false;
 
     BtlString name(_name);
-    for (unsigned int i=0; i<Instance.m_selectedActionNames.size(); ++i)
+    for (int i=0; i<Instance.m_selectedActionNames.size(); ++i)
       if (name.contains(Instance.m_selectedActionNames[i]))
         return false;
 

@@ -1,0 +1,16 @@
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/CMakeFiles/edit_cache.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/CMakeFiles/rebuild_cache.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/CMakeFiles/SESync.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/Optimization/CMakeFiles/edit_cache.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/Optimization/CMakeFiles/rebuild_cache.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/Optimization/examples/CMakeFiles/rebuild_cache.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/Optimization/examples/CMakeFiles/examples.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/Optimization/examples/CMakeFiles/ProximalGradientTest.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/Optimization/examples/CMakeFiles/TNTUnitTest.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/Optimization/examples/CMakeFiles/smooth_optimization_example.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/Optimization/examples/CMakeFiles/edit_cache.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/Optimization/examples/CMakeFiles/gradient_descent_example.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/Optimization/examples/CMakeFiles/Riemannian_optimization_example.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/examples/CMakeFiles/edit_cache.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/examples/CMakeFiles/rebuild_cache.dir
+/home/lajoiepy/Documents/master/mit/SE-Sync/C++/examples/CMakeFiles/SE-Sync.dir
