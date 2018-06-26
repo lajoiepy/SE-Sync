@@ -161,7 +161,7 @@ public:
       const Formulation &formulation = Formulation::Simplified,
       const ProjectionFactorization &projection_factorization =
           ProjectionFactorization::Cholesky,
-      const Preconditioner &preconditioner = Preconditioner::IncompleteCholesky,
+      const Preconditioner &preconditioner = Preconditioner::None,
       double reg_chol_precon_max_cond = 1e6,
       const ObjectiveFunction &obj_func = ObjectiveFunction::Unsquared_L2);
 
