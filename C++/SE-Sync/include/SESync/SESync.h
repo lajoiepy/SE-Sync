@@ -79,7 +79,7 @@ struct SESyncOpts {
   unsigned int r0 = 5;
 
   /** The maximum level of the Riemannian Staircase to explore */
-  unsigned int rmax = 10;
+  unsigned int rmax = 25;
 
   /** The maximum number of Lanczos iterations to admit for eigenvalue
  * computations */

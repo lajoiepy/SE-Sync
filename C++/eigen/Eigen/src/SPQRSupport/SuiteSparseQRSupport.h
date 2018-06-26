@@ -77,12 +77,14 @@ class SPQR : public SparseSolverBase<SPQR<_MatrixType> >
       : m_ordering(SPQR_ORDERING_DEFAULT), m_allow_tol(SPQR_DEFAULT_TOL), m_tolerance (NumTraits<Scalar>::epsilon()), m_useDefaultThreshold(true)
     { 
       cholmod_l_start(&m_cc);
+      m_cc->useGPU = true;
     }
     
     explicit SPQR(const _MatrixType& matrix)
     : m_ordering(SPQR_ORDERING_DEFAULT), m_allow_tol(SPQR_DEFAULT_TOL), m_tolerance (NumTraits<Scalar>::epsilon()), m_useDefaultThreshold(true)
     {
       cholmod_l_start(&m_cc);
+      m_cc->useGPU = true;
       compute(matrix);
     }
     
@@ -267,6 +269,7 @@ struct SPQR_QProduct : ReturnByValue<SPQR_QProduct<SPQRType,Derived> >
     cholmod_dense *x_cd; 
     int method = m_transpose ? SPQR_QTX : SPQR_QX; 
     cholmod_common *cc = m_spqr.cholmodCommon();
+    cc->useGPU=true;
     y_cd = viewAsCholmod(m_other.const_cast_derived());
     x_cd = SuiteSparseQR_qmult<Scalar>(method, m_spqr.m_H, m_spqr.m_HTau, m_spqr.m_HPinv, &y_cd, cc);
     res = Matrix<Scalar,ResType::RowsAtCompileTime,ResType::ColsAtCompileTime>::Map(reinterpret_cast<Scalar*>(x_cd->x), x_cd->nrow, x_cd->ncol);
